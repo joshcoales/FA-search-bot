@@ -189,29 +189,7 @@ class FASubmissionFull(FASubmissionShort):
         ext = self.download_url.split(".")[-1].lower()
         # Handle photos
         if ext in FASubmission.EXTENSIONS_PHOTO:
-            if self.download_file_size > self.SIZE_LIMIT_IMAGE:
-                bot.send_photo(
-                    chat_id=chat_id,
-                    photo=self.thumbnail_url,
-                    caption=f"{prefix}{self.link}\n<a href=\"{self.download_url}\">Direct download</a>",
-                    reply_to_message_id=reply_to,
-                    parse_mode=telegram.ParseMode.HTML  # Markdown is not safe here, because of the prefix.
-                )
-                return
-            bot.send_photo_with_backup(
-                chat_id,
-                {
-                    "photo": self.download_url,
-                    "caption": f"{prefix}{self.link}",
-                    "reply_to_message_id": reply_to
-                },
-                {
-                    "photo": self.thumbnail_url,
-                    "caption": f"{prefix}{self.link}\n<a href=\"{self.download_url}\">Direct download</a>",
-                    "reply_to_message_id": reply_to,
-                    "parse_mode": telegram.ParseMode.HTML  # Markdown is not safe here, because of the prefix.
-                }
-            )
+            self._send_photo(bot, chat_id, reply_to=reply_to, prefix=prefix)
             return
         # Handle files telegram can't handle
         if ext in FASubmission.EXTENSIONS_DOCUMENT or self.download_file_size > self.SIZE_LIMIT_DOCUMENT:
@@ -250,6 +228,35 @@ class FASubmissionFull(FASubmissionShort):
         if ext in FASubmission.EXTENSIONS_ERROR:
             raise CantSendFileType(f"I'm sorry, I can't neaten \".{ext}\" files.")
         raise CantSendFileType(f"I'm sorry, I don't understand that file extension ({ext}).")
+
+    def _send_photo(self, bot, chat_id: int, reply_to: int = None, prefix: str = None) -> None:
+        if self.download_file_size > self.SIZE_LIMIT_IMAGE:
+            bot.send_photo(
+                chat_id=chat_id,
+                photo=f"{self.thumbnail_url}",
+                caption=f"{prefix}{self.link}\n<a href=\"{self.download_url}\">Direct download</a>",
+                reply_to_message_id=reply_to,
+                parse_mode=telegram.ParseMode.HTML  # Markdown is not safe here, because of the prefix.
+            )
+            return
+        # TODO: Get the resolution
+        # TODO: If ratio is larger than 1:20, errr?
+        # TODO: If semi-perimeter is larger than 10k, use thumbnail
+        bot.send_photo_with_backup(
+            chat_id,
+            {
+                "photo": self.download_url,
+                "caption": f"{prefix}{self.link}",
+                "reply_to_message_id": reply_to
+            },
+            {
+                "photo": self.thumbnail_url,
+                "caption": f"{prefix}{self.link}\n<a href=\"{self.download_url}\">Direct download</a>",
+                "reply_to_message_id": reply_to,
+                "parse_mode": telegram.ParseMode.HTML  # Markdown is not safe here, because of the prefix.
+            }
+        )
+        return
 
     def _send_gif(self, bot, chat_id: int, reply_to: int = None, prefix: str = None) -> None:
         try:
